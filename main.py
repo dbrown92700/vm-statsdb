@@ -77,7 +77,7 @@ with open('statsdb.csv', 'a') as file:
 # Send email at the end of the day
 #
 
-if hour == 12:
+if hour == 0:
     message = create_email(from_user, recipient, alert_title, 'Home Depot daily StatsDB file', 'statsdb.csv')
     if 'gmail.com' in from_user:
         send_gmail(from_user, from_password, recipient, message)
