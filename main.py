@@ -1,10 +1,11 @@
 #!python3
 
+import json, csv, os.path
+from datetime import datetime, timedelta
+
 from SDWAN import getStatsDb
-#from gmail import send_gmail, send_email
-import json, csv
-from includes import baseurl, user, password
-from datetime import datetime
+from includes import baseurl, user, password, from_user, from_password, mail_server, mail_port, recipient, alert_title
+from gmail import send_email, send_gmail, create_email
 
 #
 # Grab Time
@@ -18,16 +19,15 @@ hour = now.hour
 #
 #  Pull API data
 #
+
 stats = getStatsDb(baseurl, user, password)
 jstats = json.loads(stats)
 
 #
-#  Set up file
+#  Set up file if it doesn't exist
 #
-try:
-    file = open('statsdb.csv','r')
-    close(file)
-except:
+
+if not os.path.exists('statsdb.csv'):
     file = open('statsdb.csv', 'w')
     file.write('Month,Day,Hour,')
     for stat in jstats['indexSize'][:-1]:
@@ -42,18 +42,23 @@ except:
 #
 # Grab previous Stats
 #
-day_start = last_hour = []
-for x in range(49):
-    day_start += ['0']
-    last_hour += ['0']
+
 with open('statsdb.csv', 'r') as file:
     my_list = list(csv.reader(file))
 for line in my_list:
-    if (line[0] == str(month)) & (line[1] == str(day)) & (line[2] == '0'):
-        day_start = line
+    if hour != 0:
+        if (line[0] == str(month)) & (line[1] == str(day)) & (line[2] == '0'):
+            day_start = line
+    else:
+        day_before = (now - timedelta(days = 1)).day
+        month_before = (now - timedelta(days = 1)).month
+        if (line[0] == str(month_before)) & (line[1] == str(day_before)) & (line[2] == '0'):
+            day_start = line
 last_hour = line
 
-print(f'Midnight: {day_start}\nLast Hour: {last_hour}')
+#
+# Generate current stats and write to file
+#
 
 current = [month,day,hour]
 num = 0
@@ -63,52 +68,18 @@ for stat in jstats['indexSize']:
     day_delta = currentSize - float(day_start[num*3 + 3])
     current += [stat['currentSize'].replace('gb',''), hour_delta, day_delta]
     num += 1
-#    print(f"{stat['currentSize'].replace('gb','')},", end='')
-print(current)
 with open('statsdb.csv', 'a') as file:
     for field in current[:-1]:
         file.write(f'{field},')
-    file.write(f'{field}\n')
-
-
-'''
-#
-# Read previous global issues list from local file and save to set
-#
-oldissueset = set({})
-infile = open('issueset.txt', 'r')
-for lines in infile:
-    oldissueset.add(lines.strip('\n'))
-infile.close()
+    file.write(f'{current[-1]}\n')
 
 #
-# Create new issues set and overwrite local file
-# Add net new issues to an e-mail message
+# Send email at the end of the day
 #
-currentissueset = set({})
-issue_count = 0
-mail_body = ' new global issue(s) detected on DNA Center\n\n'
-outfile = open('issueset.txt', 'w')
-for issue in jissues['response']:
-    currentissueset.add(issue[key])
-    if issue[key] not in oldissueset:
-        issue_count += 1
-        mail_body += json.dumps(issue, indent=4).replace('"', '') + '\n'
-    outfile.write(f"{issue[key]}\n")
-outfile.close()
-mail_body = str(issue_count) + mail_body
 
-#
-# calculate net new issues and send e-mail if new issues exist
-#
-newissues = currentissueset - oldissueset
-
-if newissues == set({}):
-    print('No new issues')
-else:
-    print('New Issues: ', newissues)
+if hour == 12:
+    message = create_email(from_user, recipient, alert_title, 'Home Depot daily StatsDB file', 'statsdb.csv')
     if 'gmail.com' in from_user:
-        send_gmail(gmail_user, gmail_password, recipient, 'THD DNAC Alert', mail_body)
+        send_gmail(from_user, from_password, recipient, message)
     else:
-        send_email(from_user, from_password, recipient, 'THD DNAC Alert', mail_body, mail_server, mail_port)
-'''
+        send_email(from_user, recipient, message, mail_server, mail_port)
