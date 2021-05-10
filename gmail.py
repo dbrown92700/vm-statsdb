@@ -6,7 +6,6 @@
 # app.
 #
 
-#import smtplib, email, ssl
 import smtplib
 import sys
 from email import encoders
