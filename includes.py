@@ -1,5 +1,5 @@
 # DNAC URL and credentials
-baseurl = 'https://vmanage.company.com/dataservice'
+vmanages = ['vmanage1.company.com', 'vmanage2.company.com']
 user = 'username'
 password = 'password'
 # source email account information

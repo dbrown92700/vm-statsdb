@@ -6,7 +6,8 @@
 # app.
 #
 
-import smtplib, email, ssl
+#import smtplib, email, ssl
+import smtplib
 import sys
 from email import encoders
 from email.mime.base import MIMEBase
@@ -29,15 +30,18 @@ def create_email(local_user, to, subject, body, filename=None):
     message.attach(MIMEText(body, "plain"))
 
     if filename != None:
-        with open(filename, "rb") as attachment:
-            part = MIMEBase("application", "octet-stream")
-            part.set_payload(attachment.read())
-        encoders.encode_base64(part)
-        part.add_header(
-            "Content-Disposition",
-            f"attachment; filename= {filename}",
-        )
-        message.attach(part)
+        if type(filename) == str:
+            filename == [filename]
+        for file in filename:
+            with open(file, "rb") as attachment:
+                part = MIMEBase("application", "octet-stream")
+                part.set_payload(attachment.read())
+            encoders.encode_base64(part)
+            part.add_header(
+                "Content-Disposition",
+                f"attachment; filename= {file}",
+            )
+            message.attach(part)
 
     text = message.as_string()
 
